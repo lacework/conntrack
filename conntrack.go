@@ -67,13 +67,13 @@ func (c *ConnTrack) track() error {
 	// We use Follow() to keep track of conn state changes, but it doesn't give
 	// us the initial state. If we first look at the established connections
 	// and then start the follow process we might miss events.
-	events, stop, err := Follow()
+	events, stop, err := Follow(false)
 	if err != nil {
 		return err
 	}
 
 	established := map[ConnTCP]struct{}{}
-	cs, err := Established()
+	cs, _, err := Established()
 	if err != nil {
 		return err
 	}

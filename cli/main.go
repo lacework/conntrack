@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/typetypetype/conntrack"
+	"github.com/lacework/conntrack"
 )
 
 func main() {
-	cs, err := conntrack.Established()
+	cs, _, err := conntrack.Established()
 	if err != nil {
 		panic(err)
 	}

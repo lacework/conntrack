@@ -16,30 +16,34 @@ type Attr struct {
 	IsNetByteorder bool
 }
 
-func parseAttrs(b []byte) ([]Attr, error) {
-	var attrs []Attr
+func parseAttrs(b []byte, attrs []Attr) (int, error) {
+
+	idx := 0
 	for len(b) >= attrHdrLength {
-		var attr Attr
-		attr, b = parseAttr(b)
-		attrs = append(attrs, attr)
+		var use bool
+		use, b = parseAttr(b, &attrs[idx])
+		if use {
+			idx++
+		}
 	}
 	if len(b) != 0 {
-		return nil, errors.New("leftover attr bytes")
+		return 0, errors.New("leftover attr bytes")
 	}
-	return attrs, nil
+	return idx, nil
 }
 
-func parseAttr(b []byte) (Attr, []byte) {
+func parseAttr(b []byte, attr *Attr) (bool, []byte) {
+
 	l := binary.LittleEndian.Uint16(b[0:2])
 	// length is header + payload
 	l -= uint16(attrHdrLength)
 
 	typ := binary.LittleEndian.Uint16(b[2:4])
-	attr := Attr{
-		Msg:            b[attrHdrLength : attrHdrLength+int(l)],
-		Typ:            int(typ & NLA_TYPE_MASK),
-		IsNested:       typ&NLA_F_NESTED > 0,
-		IsNetByteorder: typ&NLA_F_NET_BYTEORDER > 0,
-	}
-	return attr, b[rtaAlignOf(attrHdrLength+int(l)):]
+
+	attr.Msg = b[attrHdrLength : attrHdrLength+int(l)]
+	attr.Typ = int(typ & NLA_TYPE_MASK)
+	attr.IsNested = typ&NLA_F_NESTED > 0
+	attr.IsNetByteorder = typ&NLA_F_NET_BYTEORDER > 0
+
+	return true, b[rtaAlignOf(attrHdrLength+int(l)):]
 }
