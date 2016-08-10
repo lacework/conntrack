@@ -48,6 +48,7 @@ func connectNetfilter(groups uint32) (int, *syscall.SockaddrNetlink, error) {
 		Groups: groups,
 	}
 	if err := syscall.Bind(s, lsa); err != nil {
+		syscall.Close(s)
 		return 0, nil, err
 	}
 	return s, lsa, nil
@@ -184,13 +185,14 @@ func readMsgs(s int, cb func(Conn)) error {
 	}
 }
 type Tuple struct {
-	SrcArr   [20]byte
-	DstArr   [20]byte
-	Src      []byte // net.IP
+	Src      string //[]byte // net.IP
 	SrcPort  uint16
-	Dst      []byte // net.IP
+	Dst      string // []byte // net.IP
 	DstPort  uint16
 	Proto    int
+}
+func (t Tuple) String() string {
+	return fmt.Sprintf("%v:%d -> %v:%d", []byte(t.Src), t.SrcPort, []byte(t.Dst), t.DstPort)
 }
 
 type Conn struct {
@@ -198,6 +200,9 @@ type Conn struct {
 	Orig 	 Tuple
 	Reply	 Tuple
 	TCPState string
+}
+func (c *Conn) String() string {
+	return fmt.Sprintf("%v | %v", c.Orig, c.Reply)
 }
 
 // ConnTCP decides which way this connection is going and makes a ConnTCP.
@@ -307,11 +312,9 @@ func parseIP(b []byte, t *Tuple) error {
 		}
 		switch CtattrIp(attr.Typ) {
 		case CtaIpV4Src:
-			t.Src = t.SrcArr[0:len(attr.Msg)]
-			copy(t.Src, attr.Msg) // net.IP(attr.Msg) // TODO: copy so we can reuse the buffer?
+			t.Src = string(attr.Msg)
 		case CtaIpV4Dst:
-			t.Dst = t.DstArr[0:len(attr.Msg)]
-			copy(t.Dst, attr.Msg) // net.IP(attr.Msg) // TODO: copy so we can reuse the buffer?
+			t.Dst = string(attr.Msg)
 		case CtaIpV6Src:
 			// TODO
 		case CtaIpV6Dst:
