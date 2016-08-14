@@ -10,13 +10,13 @@ import (
 )
 
 func main() {
-	cs, _, err := conntrack.Established()
+	 _,cs, err := conntrack.Established()
 	if err != nil {
 		panic(err)
 	}
 	fmt.Printf("Established on start:\n")
 	for _, cn := range cs {
-		fmt.Printf(" - %s\n", cn)
+		fmt.Printf(" - %v\n", cn)
 	}
 	fmt.Println("")
 

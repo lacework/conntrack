@@ -160,6 +160,9 @@ func readMsgs(s int, cb func(Conn)) error {
 				)
 			}
 			err := parsePayload(msg.Data[sizeofGenmsg:], conn)
+			if err.Error() == "Not supported" {
+				continue
+			}
 			if err != nil {
 				return err
 			}
@@ -201,8 +204,8 @@ type Conn struct {
 	Reply	 Tuple
 	TCPState string
 }
-func (c *Conn) String() string {
-	return fmt.Sprintf("%v | %v", c.Orig, c.Reply)
+func (c Conn) String() string {
+	return fmt.Sprintf("%v --- %v", c.Orig, c.Reply)
 }
 
 // ConnTCP decides which way this connection is going and makes a ConnTCP.
@@ -255,11 +258,17 @@ func parsePayload(b []byte, conn *Conn) (error) {
 		}
 		switch CtattrType(attr.Typ) {
 		case CtaTupleOrig:
-			parseTuple(attr.Msg, &conn.Orig)
+			err = parseTuple(attr.Msg, &conn.Orig)
+			if err != nil {
+				return err
+			}
 		case CtaTupleReply:
 			// fmt.Printf("It's a reply\n")
 			// We take the reply, nor the orig.... Sure?
-			parseTuple(attr.Msg, &conn.Reply)
+			err = parseTuple(attr.Msg, &conn.Reply)
+			if err != nil {
+				return err
+			}
 		case CtaStatus:
 			// These are ip_conntrack_status
 			// status := binary.BigEndian.Uint32(attr.Msg)
@@ -316,8 +325,10 @@ func parseIP(b []byte, t *Tuple) error {
 		case CtaIpV4Dst:
 			t.Dst = string(attr.Msg)
 		case CtaIpV6Src:
+			return fmt.Errorf("Not supported")
 			// TODO
 		case CtaIpV6Dst:
+			return fmt.Errorf("Not supported")
 			// TODO
 		}
 	}
