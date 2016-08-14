@@ -160,10 +160,10 @@ func readMsgs(s int, cb func(Conn)) error {
 				)
 			}
 			err := parsePayload(msg.Data[sizeofGenmsg:], conn)
-			if err.Error() == "Not supported" {
-				continue
-			}
 			if err != nil {
+				if err.Error() == "Not supported" {
+					continue
+				}
 				return err
 			}
 			if conn.Orig.Proto != syscall.IPPROTO_TCP { // &&
