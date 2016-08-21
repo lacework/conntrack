@@ -85,27 +85,20 @@ func Established() ([]ConnTCP, []Conn, error) {
 	}
 
 	local := localIPs()
-	readMsgs(s, func(c Conn) {
-/*
-		if c.MsgType != NfctMsgUpdate {
-			fmt.Printf("msg isn't an update: %d\n", c.MsgType)
-			return
-		}
-		if c.TCPState != "ESTABLISHED" {
-			// fmt.Printf("state isn't ESTABLISHED: %s\n", c.TCPState)
-			return
-		}
-*/
-		conns2 = append(conns2, c)
+
+	next := func(c *Conn) {
+		conns2 = append(conns2, *c)
 		if tc := c.ConnTCP(local); tc != nil {
 			conns = append(conns, *tc)
 		}
-	})
+	}
+	readMsgs(s, next)
+
 	return conns, conns2, nil
 }
 
 // Follow gives a channel with all changes.
-func Follow(newonly bool) (<-chan *Conn, func(), error) {
+func Follow(newonly bool) (func(), func(cb func(*Conn)) error, error) {
 	flags := NF_NETLINK_CONNTRACK_NEW | NF_NETLINK_CONNTRACK_UPDATE | NF_NETLINK_CONNTRACK_DESTROY
 	if newonly {
 		flags = NF_NETLINK_CONNTRACK_NEW
@@ -115,26 +108,19 @@ func Follow(newonly bool) (<-chan *Conn, func(), error) {
 		syscall.Close(s)
 	}
 	if err != nil {
-		return nil, stop, err
+		syscall.Close(s)
+		return nil, nil, err
 	}
-
-	res := make(chan *Conn, 10000)
-	go func() {
+	next := func(cb func(*Conn)) error {
 		defer syscall.Close(s)
-		if err := readMsgs(s, func(c Conn) {
-			// if conn.TCPState != 3 {
-			// // 3 is TCP established.
-			// continue
-			// }
-			res <- &c
-		}); err != nil {
-			return
-		}
-	}()
-	return res, stop, nil
+
+		err := readMsgs(s, cb)
+		return err
+	}
+	return stop, next, nil
 }
 
-func readMsgs(s int, cb func(Conn)) error {
+func readMsgs(s int, cb func(*Conn)) error {
 
 	rb := make([]byte, syscall.Getpagesize()) // TODO: re-use
 	conn := &Conn{}
@@ -166,31 +152,17 @@ func readMsgs(s int, cb func(Conn)) error {
 				}
 				return err
 			}
-			if conn.Orig.Proto != syscall.IPPROTO_TCP { // &&
-//			   conn.Orig.Proto != syscall.IPPROTO_UDP {
+			if conn.Orig.Proto != syscall.IPPROTO_TCP {
 				continue
 			}
-			cb(*conn)
-
-/*
-			// Taken from conntrack/parse.c:__parse_message_type
-			switch CntlMsgTypes(nflnMsgType(msg.Header.Type)) {
-			case IpctnlMsgCtNew:
-				conn.MsgType = NfctMsgUpdate
-				if msg.Header.Flags&(syscall.NLM_F_CREATE|syscall.NLM_F_EXCL) > 0 {
-					conn.MsgType = NfctMsgNew
-				}
-			case IpctnlMsgCtDelete:
-				conn.MsgType = NfctMsgDestroy
-			}
-*/
+			cb(conn)
 		}
 	}
 }
 type Tuple struct {
-	Src      string //[]byte // net.IP
+	Src      string
 	SrcPort  uint16
-	Dst      string // []byte // net.IP
+	Dst      string
 	DstPort  uint16
 	Proto    int
 }

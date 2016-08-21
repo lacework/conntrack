@@ -67,7 +67,7 @@ func (c *ConnTrack) track() error {
 	// We use Follow() to keep track of conn state changes, but it doesn't give
 	// us the initial state. If we first look at the established connections
 	// and then start the follow process we might miss events.
-	events, stop, err := Follow(false)
+	stop, next, err := Follow(false)
 	if err != nil {
 		return err
 	}
@@ -86,6 +86,9 @@ func (c *ConnTrack) track() error {
 	local := localIPs()
 	updateLocalIPs := time.Tick(time.Minute)
 
+	events := make(chan Conn, 100)
+	go next(func(c *Conn) { events <- *c})
+
 	for {
 		select {
 
@@ -103,8 +106,12 @@ func (c *ConnTrack) track() error {
 			switch {
 
 			default:
-				// not interested
-
+				cn := e.ConnTCP(local)
+				if cn == nil {
+					continue
+				}
+				established[*cn] = struct{}{}
+/*
 			case e.TCPState == "ESTABLISHED":
 				cn := e.ConnTCP(local)
 				if cn == nil {
@@ -124,7 +131,7 @@ func (c *ConnTrack) track() error {
 				}
 				delete(established, *cn)
 				deleted[*cn] = struct{}{}
-
+*/
 			}
 
 		case r := <-c.connReq:
@@ -137,6 +144,7 @@ func (c *ConnTrack) track() error {
 			}
 			r <- cs
 			deleted = map[ConnTCP]struct{}{}
+			established = map[ConnTCP]struct{}{}
 
 		}
 	}
