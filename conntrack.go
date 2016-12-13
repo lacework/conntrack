@@ -1,7 +1,6 @@
 package conntrack
 
 import (
-	"fmt"
 	"log"
 	"time"
 )
@@ -15,7 +14,7 @@ type ConnTCP struct {
 }
 
 func (c ConnTCP) String() string {
-	return fmt.Sprintf("%s:%s->%s:%s", c.Local, c.LocalPort, c.Remote, c.RemotePort)
+	return c.Local + ":" + c.LocalPort + "->" + c.Remote + ":" + c.RemotePort
 }
 
 // ConnTrack monitors the connections. It is build with Established() and
@@ -87,7 +86,7 @@ func (c *ConnTrack) track() error {
 	updateLocalIPs := time.Tick(time.Minute)
 
 	events := make(chan Conn, 100)
-	go next(func(c *Conn) { events <- *c})
+	go next(func(c *Conn) { events <- *c })
 
 	for {
 		select {
@@ -111,27 +110,27 @@ func (c *ConnTrack) track() error {
 					continue
 				}
 				established[*cn] = struct{}{}
-/*
-			case e.TCPState == "ESTABLISHED":
-				cn := e.ConnTCP(local)
-				if cn == nil {
-					// log.Printf("not a local connection: %+v\n", e)
-					continue
-				}
-				established[*cn] = struct{}{}
+				/*
+					case e.TCPState == "ESTABLISHED":
+						cn := e.ConnTCP(local)
+						if cn == nil {
+							// log.Printf("not a local connection: %+v\n", e)
+							continue
+						}
+						established[*cn] = struct{}{}
 
-			case e.MsgType == NfctMsgDestroy, e.TCPState == "TIME_WAIT", e.TCPState == "CLOSE":
-				cn := e.ConnTCP(local)
-				if cn == nil {
-					// log.Printf("not a local connection: %+v\n", e)
-					continue
-				}
-				if _, ok := established[*cn]; !ok {
-					continue
-				}
-				delete(established, *cn)
-				deleted[*cn] = struct{}{}
-*/
+					case e.MsgType == NfctMsgDestroy, e.TCPState == "TIME_WAIT", e.TCPState == "CLOSE":
+						cn := e.ConnTCP(local)
+						if cn == nil {
+							// log.Printf("not a local connection: %+v\n", e)
+							continue
+						}
+						if _, ok := established[*cn]; !ok {
+							continue
+						}
+						delete(established, *cn)
+						deleted[*cn] = struct{}{}
+				*/
 			}
 
 		case r := <-c.connReq:

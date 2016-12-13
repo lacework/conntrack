@@ -79,7 +79,7 @@ func Established() ([]ConnTCP, []Conn, error) {
 		},
 	}
 	wb := msg.toWireFormat()
-	// fmt.Printf("msg bytes: %q\n", wb)
+	//fmt.Printf("msg bytes: %q\n", wb)
 	if err := syscall.Sendto(s, wb, 0, lsa); err != nil {
 		return nil, nil, err
 	}
@@ -130,11 +130,13 @@ func readMsgs(s int, cb func(*Conn)) error {
 		if err != nil {
 			return err
 		}
+		//fmt.Println(nr, rb)
 
 		msgs, err := syscall.ParseNetlinkMessage(rb[:nr])
 		if err != nil {
 			return err
 		}
+		//fmt.Println(msgs)
 		for _, msg := range msgs {
 			if err := nfnlIsError(msg.Header); err != nil {
 				return fmt.Errorf("msg is some error: %s\n", err)
@@ -159,23 +161,26 @@ func readMsgs(s int, cb func(*Conn)) error {
 		}
 	}
 }
+
 type Tuple struct {
-	Src      string
-	SrcPort  uint16
-	Dst      string
-	DstPort  uint16
-	Proto    int
+	Src     string
+	SrcPort uint16
+	Dst     string
+	DstPort uint16
+	Proto   int
 }
+
 func (t Tuple) String() string {
 	return fmt.Sprintf("%v:%d -> %v:%d", []byte(t.Src), t.SrcPort, []byte(t.Dst), t.DstPort)
 }
 
 type Conn struct {
 	MsgType  NfConntrackMsg
-	Orig 	 Tuple
-	Reply	 Tuple
+	Orig     Tuple
+	Reply    Tuple
 	TCPState string
 }
+
 func (c Conn) String() string {
 	return fmt.Sprintf("%v --- %v", c.Orig, c.Reply)
 }
@@ -215,7 +220,7 @@ func (c Conn) ConnTCP(local map[string]struct{}) *ConnTCP {
 	return nil
 }
 
-func parsePayload(b []byte, conn *Conn) (error) {
+func parsePayload(b []byte, conn *Conn) error {
 
 	attrs := make([]Attr, 20)
 	// Most of this comes from libnetfilter_conntrack/src/conntrack/parse_mnl.c
@@ -246,7 +251,7 @@ func parsePayload(b []byte, conn *Conn) (error) {
 			// status := binary.BigEndian.Uint32(attr.Msg)
 			// fmt.Printf("It's status %d\n", status)
 		case CtaProtoinfo:
-//			parseProtoinfo(attr.Msg, conn)
+			//			parseProtoinfo(attr.Msg, conn)
 		}
 	}
 	return nil
