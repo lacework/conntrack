@@ -122,12 +122,15 @@ func Follow(newonly bool) (func(), func(cb func(*Conn)) error, error) {
 
 func readMsgs(s int, cb func(*Conn)) error {
 
-	rb := make([]byte, syscall.Getpagesize()) // TODO: re-use
+	rb := make([]byte, 2*syscall.Getpagesize()) // TODO: re-use
 	conn := &Conn{}
 
 	for {
 		nr, _, err := syscall.Recvfrom(s, rb, 0)
-		if err != nil {
+		if err == syscall.ENOBUFS {
+			// ENOBUF means we miss some events here. No way around it. That's life.
+			continue
+		} else if err != nil {
 			return err
 		}
 		//fmt.Println(nr, rb)
