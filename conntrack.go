@@ -83,7 +83,8 @@ func (c *ConnTrack) track() error {
 	deleted := map[ConnTCP]struct{}{}
 
 	local := localIPs()
-	updateLocalIPs := time.Tick(time.Minute)
+	updateLocalIPs := time.NewTicker(time.Minute)
+	defer updateLocalIPs.Stop()
 
 	events := make(chan Conn, 100)
 	go next(func(c *Conn) { events <- *c })
@@ -95,7 +96,7 @@ func (c *ConnTrack) track() error {
 			stop()
 			return nil
 
-		case <-updateLocalIPs:
+		case <-updateLocalIPs.C:
 			local = localIPs()
 
 		case e, ok := <-events:
